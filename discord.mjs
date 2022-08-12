@@ -1,12 +1,19 @@
-import { Client, GatewayIntentBits } from 'discord.js';
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+import { Client, GatewayIntentBits, PermissionsBitField } from 'discord.js';
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMembers, GatewayIntentBits.MessageContent] });
 
 import { create, all } from 'mathjs';
-const math = create(all);
+const allButTransforms = {}
+Object.keys(all)
+  .filter(key => !key.endsWith('Transform'))
+  .forEach(key => {
+    allButTransforms[key] = all[key]
+})
+const math = create(allButTransforms)
 
 math.import({
+	'add':		function (x,y) {				return x + y},
 	'TYPE':		function (input) {			return math.typeOf(input)},
-	'CONCAT':	function (str1,str2) {		return math.concat(str1,str2)},
+	'CONCAT':	function (str1,str2) {	return math.concat(str1,str2)},
 	'ABS':		function (input) {			return math.abs(input)},
 	'SQR':		function (input) {			return math.sqrt(input)},
 	'EXP':		function (input) {			return math.exp(input)},
@@ -22,18 +29,32 @@ math.import({
 	'HEX':		function (input) {			return math.hex(input).substring(2).toUpperCase()},
 	'OCT':		function (input) {			return math.oct(input).substring(2).toUpperCase()},
 	'BIN':		function (input) {			return math.bin(input).substring(2).toUpperCase()},
-	'$H':		function (input) {			return parseInt(input,16)},
-	'$O':		function (input) {			return parseInt(input,8)},
-	'$B':		function (input) {			return parseInt(input,2)},
+	'$H':		function (input) {				return parseInt(input,16)},
+	'$O':		function (input) {				return parseInt(input,8)},
+	'$B':		function (input) {				return parseInt(input,2)},
 	'LEN':		function (input) {			return input.length},
 	'LEFT':		function (input,len) {		return input.substring(0,len)},
 	'RIGHT':	function (input,len) {		return input.substring(input.length - len,input.length)},
 	'MID':		function (input,start,len) {return input.substring(start,start + len)},
-	'INSTR':	function (str1,str2) { 		return str1.indexOf(str2)}
+	'INSTR':	function (str1,str2) { 		return str1.indexOf(str2)},
+	'PROMPT':	function (input) { 		
+		if(wait == false){
+			wait = true;
+			textOut(input);
+			return 0;
+		}
+		else{
+			return promptLine;
+		}
+	
+		return str1.indexOf(str2)
+	}
 }, { override: true })
+
 
 const basicEvaluate = math.evaluate;
 
+var wait = false;
 var quit = false;
 var currentLine;
 var program = [];
@@ -42,6 +63,7 @@ var output;
 var stack = [];
 var ifTest;
 var lastChannel;
+var promptLine;
 
 function parse(line){
 	line = (line + "").trim();
@@ -52,7 +74,7 @@ function parse(line){
 		return null;
 	}
 	
-	if((splitLine[0] != "IF") &&(line.indexOf(":") > -1)){
+	if((splitLine[0] != "IF" & isNaN(splitLine[0])) && (line.indexOf(":") > -1)){
 		line.split(":").forEach(parse);
 		return null;
 	}
@@ -150,7 +172,7 @@ function parse(line){
 		
 		case "RUN":
 			currentLine = 0;
-			while(!quit && currentLine < program.length){
+			while((!quit && !wait) && currentLine < program.length){
         if(program[currentLine] != null){
 					parse(program[currentLine])
 				}
@@ -199,7 +221,36 @@ function textOut(x){
 
 client.once('ready', c => {
   console.log(`Ready! Logged in as ${c.user.tag}`);
-  console.log("NOMAD BASIC V0.1 BETA");
+  //console.log("NOMAD BASIC V0.1 BETA");
+	//const Guilds = client.guilds.cache;
+	//console.log(client.channels.cache);
+	//console.log(client.guilds.cache)
+	client.channels.cache.forEach(channel => {
+  	//let thing = getBotPermissions(channel.guild.members)
+		//console.log(thing)
+		
+		if(channel.permissionsFor(client.user).has(PermissionsBitField.Flags.ViewChannel) & (channel.type==0)){
+			//console.log(client.user)
+			channel.send("NOMAD BASIC V0.5 BETA")
+			channel.send("OK")
+		}
+		
+		
+		
+		//	.then(console.log)
+  	//	.catch(console.error);
+		//console.log(channel.guild.me.permissionsIn(channel).has("SEND_MESSAGES"));
+		
+		//console.log(client.user.id);
+		
+		//console.log(client.user.permissionsIn(channel).has("SEND_MESSAGES"));
+  })
+
+  //client.channels.forEach(channel => {
+  //	if(channel.type === 'text'){
+  //		channel.send('test');
+  //	}
+  //})
   //console.log(client)
 });
 
@@ -207,14 +258,39 @@ client.on("messageCreate", message => {
   console.log(message.author.username + ": " + message.content);
   //console.log(message.channel);
 
-  if (message.author.id != client.user.id) {
+  if (!(message.content.match(/<a?:.+?:\d+>/)) & (message.author.id != client.user.id)) {
     //message.channel.send("i can say whatever i want");
     lastChannel = message.channel;
-    currentLine = "terminal";
-	  var input = message.content.toUpperCase();
-	  parse(input);
-    textOut("OK");
+    
+		if(wait == false){
+			currentLine = "terminal";
+		  var input = message.content.toUpperCase();
+		  parse(input);
+			if(wait == false){
+				textOut("OK");
+			}
+		}
+		else{
+			//console.log("hello")
+			promptLine = message.content;
+			parse(program[currentLine - 1]);
+			wait = false;
+			while((!quit & !wait) & currentLine < program.length){
+        if(program[currentLine] != null){
+					parse(program[currentLine])
+				}
+				currentLine++;
+			}
+			textOut("OK");
+		}
+		
+    
   }
 });
+
+async function getBotPermissions(users) {
+  let abc = await users.fetch(client.user.id);
+  console.log(abc);
+}
 
 client.login(process.env.TOKEN);
