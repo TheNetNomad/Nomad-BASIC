@@ -40,8 +40,8 @@ math.import({
 	'COS':		function (input) {			return math.cos(input)},
 	'SIN':		function (input) {			return math.sin(input)},
 	'TAN':		function (input) {			return math.tan(input)},
-	'VAL$':		function (input) {			return Number(input)},
-	'HEX':		function (input) {			return math.hex(input).substring(2).toUpperCase()},
+	'VAL':		function (input) {			return Number(input)},
+	'HEX$':		function (input) {			return math.hex(input).substring(2).toUpperCase()},
 	'OCT$':		function (input) {			return math.oct(input).substring(2).toUpperCase()},
 	'BIN$':		function (input) {			return math.bin(input).substring(2).toUpperCase()},
 	'$H':		function (input) {				return parseInt(input,16)},
@@ -108,7 +108,7 @@ function parse(line){
 	line = (line + "").trim();
 	let splitLine = line.split(/ (.*)/s);
 	
-	//console.log("Evaluating " + line)
+	console.log("Evaluating " + line)
 
 	if((splitLine[0] != "IF" & isNaN(splitLine[0])) && (line.indexOf(":") > -1)){
 		let inQuote = false;
@@ -203,14 +203,17 @@ function parse(line){
 				if(splitLine[1][0] == ""){
 					splitLine[1][0] = "?";
 				}
+				
 				try {
+					console.log(splitLine[1][1] + " = PROMPT(" + splitLine [1][0] + ")");
 					basicEvaluate(splitLine[1][1] + " = PROMPT(" + splitLine [1][0] + ")",scope);
 				} catch (error) {
 					textOut(error.toString().split("\n")[0]   + " in " + currentLine);
 					if(currentLine != "terminal"){
 						quit = true;
 					}
-				}	
+				}
+				
 			}
 			else{
 				try {
@@ -222,7 +225,7 @@ function parse(line){
 					}
 				}	
 			}
-			
+			break;
 			
 		
 		case "PRINT":
