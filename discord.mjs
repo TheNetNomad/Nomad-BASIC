@@ -12,7 +12,13 @@ const math = create(allButTransforms)
 
 math.import({
 	'add':		function (x,y) {				return x + y},
-	'TYPE':		function (input) {			return math.typeOf(input)},
+	'equal':	function (x,y) {				return x == y},
+	'unequal':	function (x,y) {			return x != y},
+	'TIME':		function () {
+		timer = new Date();
+		return timer.getTime();
+	},
+	'TYPE':		function (input) {			return math.typeOf(input).toUpperCase()},
 	'CONCAT':	function (str1,str2) {	return math.concat(str1,str2)},
 	'ABS':		function (input) {			return math.abs(input)},
 	'SQR':		function (input) {			return math.sqrt(input)},
@@ -21,14 +27,23 @@ math.import({
 	'FIX':		function (input) {			return math.fix(input)},
 	'INT':		function (input) {			return math.floor(input)},
 	'SGN':		function (input) {			return math.sign(input)},
-	'RND':		function (min,max) {		return math.randomInt(min,max)},
+	'RND':		function (min,max) {
+		if(!isNaN(min) && !isNaN(max)){
+			return math.randomInt(min,max+1);
+		}
+		else{
+			return math.random();
+		}
+		
+	},
 	'ATN':		function (input) {			return math.atan(input)},
 	'COS':		function (input) {			return math.cos(input)},
 	'SIN':		function (input) {			return math.sin(input)},
 	'TAN':		function (input) {			return math.tan(input)},
+	'VAL$':		function (input) {			return Number(input)},
 	'HEX':		function (input) {			return math.hex(input).substring(2).toUpperCase()},
-	'OCT':		function (input) {			return math.oct(input).substring(2).toUpperCase()},
-	'BIN':		function (input) {			return math.bin(input).substring(2).toUpperCase()},
+	'OCT$':		function (input) {			return math.oct(input).substring(2).toUpperCase()},
+	'BIN$':		function (input) {			return math.bin(input).substring(2).toUpperCase()},
 	'$H':		function (input) {				return parseInt(input,16)},
 	'$O':		function (input) {				return parseInt(input,8)},
 	'$B':		function (input) {				return parseInt(input,2)},
@@ -38,16 +53,27 @@ math.import({
 	'MID':		function (input,start,len) {return input.substring(start,start + len)},
 	'INSTR':	function (str1,str2) { 		return str1.indexOf(str2)},
 	'PROMPT':	function (input) { 		
+		if(currentLine == "terminal"){
+			textOut("ERROR: PROMPT NOT VALID OUTSIDE PROGRAM");
+			return 0;
+		}
+		
 		if(wait == false){
 			wait = true;
-			textOut(input);
+			if(input == ""){
+				input = "?";
+			}
+			textOut(input + "** **");
 			return 0;
 		}
 		else{
+			promptLine = promptLine.toUpperCase();
+			if(promptLine == "END"){
+				currentLine = program.length ;
+				textOut("PROGRAM TERMINATED");
+			}
 			return promptLine;
 		}
-	
-		return str1.indexOf(str2)
 	}
 }, { override: true })
 
@@ -64,22 +90,43 @@ var stack = [];
 var ifTest;
 var lastChannel;
 var promptLine;
+var timer = new Date();
+var timeOut = false;
+var timeLimit;
+var messageBuffer = "";
+var messageSizeError = false;
+
+console.log("Initializing...");
 
 function parse(line){
+	timer = new Date();
+	if (timer.getTime() > timeLimit){
+		timeOut = true;
+		return;
+	}
+	
 	line = (line + "").trim();
 	let splitLine = line.split(/ (.*)/s);
+	
+	//console.log("Evaluating " + line)
+
+	if((splitLine[0] != "IF" & isNaN(splitLine[0])) && (line.indexOf(":") > -1)){
+		let inQuote = false;
+		for (var i = 0; i < line.length; i++) {
+		  if(line.charAt(i) == '"'){
+				inQuote = !inQuote
+			}
+			if(!inQuote && line.charAt(i) == ":"){
+				line = line.substring(0,i) + "\n" + line.substring(i+1);
+			}
+		}
+	}
 	
 	if(line.indexOf("\n") > -1){
 		line.split("\n").forEach(parse);
 		return null;
 	}
-	
-	if((splitLine[0] != "IF" & isNaN(splitLine[0])) && (line.indexOf(":") > -1)){
-		line.split(":").forEach(parse);
-		return null;
-	}
 
-  //console.log("Evaluating " + line);
 	switch(splitLine[0]) {
 		case "REM":
 			break;
@@ -90,6 +137,7 @@ function parse(line){
 			
 		case "CLEAR":
 			scope = {};
+			program = [];
 			break;
 			
 		case "IF":
@@ -147,6 +195,35 @@ function parse(line){
 		case "RETURN":
 			currentLine = stack.pop();
 			break;
+
+		case "INPUT":
+			if(splitLine[1].indexOf(",") > -1){
+				splitLine[1] = splitLine[1].split(",");
+			
+				if(splitLine[1][0] == ""){
+					splitLine[1][0] = "?";
+				}
+				try {
+					basicEvaluate(splitLine[1][1] + " = PROMPT(" + splitLine [1][0] + ")",scope);
+				} catch (error) {
+					textOut(error.toString().split("\n")[0]   + " in " + currentLine);
+					if(currentLine != "terminal"){
+						quit = true;
+					}
+				}	
+			}
+			else{
+				try {
+					basicEvaluate(splitLine[1] + ' = PROMPT("?")',scope);
+				} catch (error) {
+					textOut(error.toString().split("\n")[0]   + " in " + currentLine);
+					if(currentLine != "terminal"){
+						quit = true;
+					}
+				}	
+			}
+			
+			
 		
 		case "PRINT":
 			try {
@@ -181,11 +258,17 @@ function parse(line){
 			break;
 			
 		case "LIST":
-			for (let i = 0; i < program.length; i++) {
-				if(program[i] != null){
-					textOut(i + " " + program[i]);
+			if(!isNaN(splitLine[1])){
+				textOut(splitLine[1] + " " + program[splitLine[1]]);
+			}
+			else{
+				for (let i = 0; i < program.length; i++) {
+					if(program[i] != null){
+						textOut(i + " " + program[i]);
+					}
 				}
 			}
+			
 			break;
 			
 		case "END":
@@ -193,7 +276,7 @@ function parse(line){
 				quit = true;
 			}
 			else{
-				currentLine = program.length - 2;
+				currentLine = program.length;
 			}
 			break;
 		
@@ -216,62 +299,42 @@ function parse(line){
 }
 
 function textOut(x){
-	lastChannel.send(x + "");
+	x = x + "";
+	if(messageBuffer.length + x.length <= 2000){
+		messageBuffer += x + "\n";
+	}
+	else{
+		messageSizeError = true;
+		quit = true;
+	}
 }
 
 client.once('ready', c => {
   console.log(`Ready! Logged in as ${c.user.tag}`);
-  //console.log("NOMAD BASIC V0.1 BETA");
-	//const Guilds = client.guilds.cache;
-	//console.log(client.channels.cache);
-	//console.log(client.guilds.cache)
 	client.channels.cache.forEach(channel => {
-  	//let thing = getBotPermissions(channel.guild.members)
-		//console.log(thing)
-		
 		if(channel.permissionsFor(client.user).has(PermissionsBitField.Flags.ViewChannel) & (channel.type==0)){
-			//console.log(client.user)
 			channel.send("NOMAD BASIC V0.5 BETA")
 			channel.send("OK")
 		}
-		
-		
-		
-		//	.then(console.log)
-  	//	.catch(console.error);
-		//console.log(channel.guild.me.permissionsIn(channel).has("SEND_MESSAGES"));
-		
-		//console.log(client.user.id);
-		
-		//console.log(client.user.permissionsIn(channel).has("SEND_MESSAGES"));
   })
-
-  //client.channels.forEach(channel => {
-  //	if(channel.type === 'text'){
-  //		channel.send('test');
-  //	}
-  //})
-  //console.log(client)
 });
 
 client.on("messageCreate", message => {
   console.log(message.author.username + ": " + message.content);
-  //console.log(message.channel);
 
   if (!(message.content.match(/<a?:.+?:\d+>/)) & (message.author.id != client.user.id)) {
-    //message.channel.send("i can say whatever i want");
     lastChannel = message.channel;
-    
+		timer = new Date();
+		timeLimit = timer.getTime() + 5000;
+		console.log("Time limit set to " + timeLimit);
+	
+		
 		if(wait == false){
 			currentLine = "terminal";
 		  var input = message.content.toUpperCase();
 		  parse(input);
-			if(wait == false){
-				textOut("OK");
-			}
 		}
 		else{
-			//console.log("hello")
 			promptLine = message.content;
 			parse(program[currentLine - 1]);
 			wait = false;
@@ -281,16 +344,28 @@ client.on("messageCreate", message => {
 				}
 				currentLine++;
 			}
+		}
+		if(timeOut){
+			timeOut = false;
+			textOut("ERROR: MAXIMUM EXECUTION TIME EXCEEDED");
+		}
+		if(wait == false){
 			textOut("OK");
 		}
-		
     
+		lastChannel.send(messageBuffer.toUpperCase());
+		messageBuffer = "";
+		
+		if(messageSizeError){	
+			lastChannel.send("ERROR: MAXIMUM OUTPUT SIZE EXCEEDED");
+		}
+		messageSizeError = false;
+		quit = false;
   }
 });
 
-async function getBotPermissions(users) {
-  let abc = await users.fetch(client.user.id);
-  console.log(abc);
-}
-
+console.log("Connecting...");
+client.on('debug', console.log);
+client.on('error', console.error);
+client.on('warning', console.warn);
 client.login(process.env.TOKEN);
