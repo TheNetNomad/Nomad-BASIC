@@ -1,3 +1,5 @@
+console.log("Initializing...");
+
 import { Client, GatewayIntentBits, PermissionsBitField } from 'discord.js';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMembers, GatewayIntentBits.MessageContent] });
 
@@ -48,6 +50,7 @@ math.import({
 	'$O':		function (input) {				return parseInt(input,8)},
 	'$B':		function (input) {				return parseInt(input,2)},
 	'LEN':		function (input) {			return input.length},
+	'TAB':		function (input) {			return "** **" + " ".repeat(input - 1)},
 	'LEFT':		function (input,len) {		return input.substring(0,len)},
 	'RIGHT':	function (input,len) {		return input.substring(input.length - len,input.length)},
 	'MID':		function (input,start,len) {return input.substring(start,start + len)},
@@ -60,7 +63,7 @@ math.import({
 		
 		if(wait == false){
 			wait = true;
-			if(input == ""){
+			if(input == "" || input == null){
 				input = "?";
 			}
 			textOut(input + "** **");
@@ -96,7 +99,14 @@ var timeLimit;
 var messageBuffer = "";
 var messageSizeError = false;
 
-console.log("Initializing...");
+function preparse(ln){
+	ln = ln.replaceAll(" AND "," and ");
+	ln = ln.replaceAll(" OR "," or ");
+	ln = ln.replaceAll(" XOR "," xor ");
+	ln = ln.replaceAll(" <> "," != ");
+	ln = ln.replaceAll('PRINT"','PRINT "');
+	return ln;
+}
 
 function parse(line){
 	timer = new Date();
@@ -149,6 +159,7 @@ function parse(line){
 			}
 			
 			try {
+				splitLine[1][0] = preparse(splitLine[1][0]);
 				ifTest = basicEvaluate(splitLine[1][0],scope);
 			} catch (error) {
 				textOut(error.toString().split("\n")[0]   + " in " + currentLine);
@@ -197,16 +208,28 @@ function parse(line){
 			break;
 
 		case "INPUT":
-			if(splitLine[1].indexOf(",") > -1){
-				splitLine[1] = splitLine[1].split(",");
+			let inQuote = false;
+			let foundComma = false;
+			for (var i = 0; i < splitLine[1].length; i++) {
+			  if(splitLine[1].charAt(i) == '"'){
+					inQuote = !inQuote
+				}
+				if(!inQuote && splitLine[1].charAt(i) == ","){
+					foundComma = true;
+				}
+			}
+
+			if(foundComma){
+				//splitLine[1] = splitLine[1].split(",");
+				splitLine[1] = splitLine[1].split(/(,[^,]*)$/);
 			
 				if(splitLine[1][0] == ""){
 					splitLine[1][0] = "?";
 				}
 				
 				try {
-					console.log(splitLine[1][1] + " = PROMPT(" + splitLine [1][0] + ")");
-					basicEvaluate(splitLine[1][1] + " = PROMPT(" + splitLine [1][0] + ")",scope);
+					console.log(splitLine[1][1].substring(1) + " = PROMPT(" + splitLine [1][0] + ")");
+					basicEvaluate(splitLine[1][1].substring(1) + " = PROMPT(" + splitLine [1][0] + ")",scope);
 				} catch (error) {
 					textOut(error.toString().split("\n")[0]   + " in " + currentLine);
 					if(currentLine != "terminal"){
@@ -230,18 +253,24 @@ function parse(line){
 		
 		case "PRINT":
 			try {
-				output = basicEvaluate(splitLine[1],scope);
-				switch(math.typeOf(output)){
-					case "Unit":
-						break;
-						
-					case "DenseMatrix":
-						textOut(output._data)
-						break;
-						
-					default:
-						textOut(output);
+				if(splitLine[1] == "" | splitLine[1] == null){
+					textOut(" ");
+				}else{
+					splitLine[1] = preparse(splitLine[1]);
+					output = basicEvaluate(splitLine[1],scope);
+					switch(math.typeOf(output)){
+						case "Unit":
+							break;
+							
+						case "DenseMatrix":
+							textOut(output._data)
+							break;
+							
+						default:
+							textOut(output);
+					}
 				}
+				
 			} catch (error) {
 				textOut(error.toString().split("\n" )[0]  + " in " + currentLine);
 				if(currentLine != "terminal"){
@@ -289,6 +318,7 @@ function parse(line){
 			}
 			else{
 				try {
+					line = preparse(line);
 					basicEvaluate(line,scope);
 				} catch (error) {
 					textOut(error.toString().split("\n")[0]   + " in " + currentLine);
