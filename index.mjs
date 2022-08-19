@@ -1,6 +1,6 @@
 console.log("Initializing...");
 
-import { Client, GatewayIntentBits, PermissionsBitField } from 'discord.js';
+import { Client, GatewayIntentBits, PermissionsBitField, AttachmentBuilder } from 'discord.js';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMembers, GatewayIntentBits.MessageContent] });
 
 import { create, all } from 'mathjs';
@@ -50,6 +50,8 @@ math.import({
 	'$O':		function (input) {				return parseInt(input,8)},
 	'$B':		function (input) {				return parseInt(input,2)},
 	'LEN':		function (input) {			return input.length},
+	'ASC':		function (input) {			return input.charCodeAt(0)},
+	'CHR$':		function (input) {			return String.fromCharCode(input)},
 	'TAB':		function (input) {			return "** **" + " ".repeat(input - 1)},
 	'LEFT':		function (input,len) {		return input.substring(0,len)},
 	'RIGHT':	function (input,len) {		return input.substring(input.length - len,input.length)},
@@ -85,6 +87,7 @@ const basicEvaluate = math.evaluate;
 
 var wait = false;
 var quit = false;
+var gosubret = false;
 var currentLine;
 var program = [];
 var scope = {};
@@ -98,6 +101,7 @@ var timeOut = false;
 var timeLimit;
 var messageBuffer = "";
 var messageSizeError = false;
+
 
 function preparse(ln){
 	ln = ln.replaceAll(" AND "," and ");
@@ -133,26 +137,49 @@ function parse(line){
 	}
 	
 	if(line.indexOf("\n") > -1){
-		line.split("\n").forEach(parse);
+		if(currentLine == "terminal"){
+			line.split("\n").forEach(parse);
+		}
+		else{
+			for(let subline of line.split("\n")){
+				if(currentLine < program.length){
+					parse(subline);
+				}
+			}
+		}
 		return null;
 	}
 
 	switch(splitLine[0]) {
 		case "REM":
 			break;
-		
+
+		case "DIM":
+			break;
+
+		case "LET":
+			parse(splitLine[1]);
+			break;
+			
 		case "CLS":
 			console.clear();
 			break;
 			
-		case "CLEAR":
+		case "NEW":
 			scope = {};
 			program = [];
+			break;
+
+		case "CLEAR":
+			scope = {};
 			break;
 			
 		case "IF":
 			if(splitLine[1].indexOf("ELSE") > -1){
 				splitLine[1] = splitLine[1].split(/(THEN)((?:\n|.)*)(ELSE)/);
+			}
+			else if(splitLine[1].indexOf("GOTO") > -1 && splitLine[1].indexOf("THEN" == -1)){
+				splitLine[1] = splitLine[1].split(/(GOTO)(.*)/s);
 			}
 			else{
 				splitLine[1] = splitLine[1].split(/(THEN)(.*)/s);
@@ -169,10 +196,20 @@ function parse(line){
 			}
 			
 			if(ifTest){
-				parse(splitLine[1][2],scope);
+				if(!isNaN(splitLine[1][2])){
+					currentLine = splitLine[1][2] - 1;
+				}
+				else{
+					parse(splitLine[1][2],scope);
+				}
 			}
 			else{
-				parse(splitLine[1][4],scope);
+				if(!isNaN(splitLine[1][4])){
+					currentLine = splitLine[1][4] - 1;
+				}
+				else{
+					parse(splitLine[1][4],scope);
+				}
 			}
 			break;
 			
@@ -193,7 +230,22 @@ function parse(line){
 			splitLine[1] = parseInt(splitLine[1]);
 			if(Number.isInteger(splitLine[1])){
 				stack.push(currentLine);
-				currentLine = parseInt(splitLine[1]) - 1;
+				currentLine = parseInt(splitLine[1]);
+				//parse(program[currentLine]);
+				gosubret = false;
+				while(!gosubret && ((!quit && !wait) && currentLine < program.length)){
+	        console.log("Line " + currentLine + "outta" + program.length)
+					if(program[currentLine] != null){
+						parse(program[currentLine])
+					}
+					currentLine++;
+					if(currentLine >= program.length){
+						console.log("trying to END");
+						//quit = true;
+						//return;
+					}
+				}
+				
 			}
 			else{
 				textOut("Error: Invalid line number in " + currentLine);
@@ -205,6 +257,7 @@ function parse(line){
 		
 		case "RETURN":
 			currentLine = stack.pop();
+			gosubret = true;
 			break;
 
 		case "INPUT":
@@ -257,6 +310,17 @@ function parse(line){
 					textOut(" ");
 				}else{
 					splitLine[1] = preparse(splitLine[1]);
+					
+					let inQuote = false;
+					for (var i = 0; i < splitLine[1].length; i++) {
+					  if(splitLine[1].charAt(i) == '"'){
+							inQuote = !inQuote
+						}
+						if(!inQuote && (splitLine[1].charAt(i) == ";" | splitLine[1].charAt(i) == ",")){
+							splitLine[1] = splitLine[1].substring(0,i) + "+" + splitLine[1].substring(i+1);
+						}
+					}
+					
 					output = basicEvaluate(splitLine[1],scope);
 					switch(math.typeOf(output)){
 						case "Unit":
@@ -282,7 +346,8 @@ function parse(line){
 		case "RUN":
 			currentLine = 0;
 			while((!quit && !wait) && currentLine < program.length){
-        if(program[currentLine] != null){
+        //console.log("Line " + currentLine + "outta" + program.length)
+				if(program[currentLine] != null){
 					parse(program[currentLine])
 				}
 				currentLine++;
@@ -300,7 +365,18 @@ function parse(line){
 					}
 				}
 			}
+			break;
 			
+		case "SAVE":
+		case "LLIST":
+			let txtfile = "";
+			for (let i = 0; i < program.length; i++) {
+				if(program[i] != null){
+					txtfile += i + " " + program[i] + '\n'
+				}
+			}
+			let attachment = new AttachmentBuilder(Buffer.from(txtfile, 'utf-8'), { name: 'bas.txt' })
+			lastChannel.send({ files: [attachment] });
 			break;
 			
 		case "END":
@@ -346,7 +422,7 @@ client.once('ready', c => {
   console.log(`Ready! Logged in as ${c.user.tag}`);
 	client.channels.cache.forEach(channel => {
 		if(channel.permissionsFor(client.user).has(PermissionsBitField.Flags.ViewChannel) & (channel.type==0)){
-			channel.send("NOMAD BASIC V0.5 BETA")
+			channel.send("NOMAD BASIC V1.0")
 			channel.send("OK")
 		}
   })
