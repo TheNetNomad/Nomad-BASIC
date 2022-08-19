@@ -58,14 +58,19 @@ Your bot's token must be stored in the TOKEN environmental variable
 Lines are added to the program by writing the desired line number followed by the desired line. Standard mathematical operators can also be used.
 
 # Differences from most BASICs
+* Nothing is in real time, no reading of individual keystrokes or doing timed actions
 * Spaces are required between all commands
-* For testing equality, == and != are used instead of = and <>
-* Variables do not (or rather can not) be allocated before usage with DIM, DEFINT et cetera
+* For testing equality, == is used instead of =
+* Variables do not need to be allocated before usage with DIM, DEFINT, LET et cetera
 * Execution time is capped out at 1 second for each message sent (PROMPTing for INPUT resets this clock)
 * Text output is limitted to 2000 characters (PROMPTing for INPUT resets this count)
-* There is no FOR command
+* There is no FOR... NEXT or WHILE... WEND construct
+* There is no PEAKing and POKEing
+* There are no DATA or READ commands
 
 # TODO
-* FOR command
+* FOR...NEXT construct
+* WHILE...WENT construct
+* DATA/READ commands
 * Drawing commands for image output (no real time support is planned)
 * MML commands for audio output
