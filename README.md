@@ -71,6 +71,7 @@ Lines are added to the program by writing the desired line number followed by th
 # TODO
 * FOR...NEXT construct
 * WHILE...WENT construct
+* Load program from attachment
 * DATA/READ commands
 * Drawing commands for image output (no real time support is planned)
 * MML commands for audio output
