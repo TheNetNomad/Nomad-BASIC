@@ -175,6 +175,8 @@ function parse(line){
 			break;
 			
 		case "IF":
+			splitLine[1] = splitLine[1].replaceAll("THEN GOTO","THEN");
+			splitLine[1] = splitLine[1].replaceAll("ELSE GOTO","ELSE");
 			if(splitLine[1].indexOf("ELSE") > -1){
 				splitLine[1] = splitLine[1].split(/(THEN)((?:\n|.)*)(ELSE)/);
 			}
