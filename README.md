@@ -60,8 +60,8 @@ Lines are added to the program by writing the desired line number followed by th
 # Differences from most BASICs
 * Nothing is in real time, no reading of individual keystrokes or doing timed actions
 * Spaces are required between all commands
-* For testing equality, == is used instead of =
 * Variables do not need to be allocated before usage with DIM, DEFINT, LET et cetera
+* Array contents and set and retrieved with [] instead of ()
 * Execution time is capped out at 1 second for each message sent (PROMPTing for INPUT resets this clock)
 * Text output is limitted to 2000 characters (PROMPTing for INPUT resets this count)
 * There is no FOR... NEXT or WHILE... WEND construct
