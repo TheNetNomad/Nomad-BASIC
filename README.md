@@ -2,6 +2,8 @@
 
 A simple CLI BASIC interpretor for your discord server. Currently only supports one instance of the interepter, so must be self-hosted for each server and limitted in permissions to view only one channel.
 
+[Try it out on _NomadNet](https://discord.gg/effsHwSs)
+
 # NPM Dependencies 
 
 [discord js](https://discord.js.org/#/)  
@@ -60,7 +62,7 @@ Lines are added to the program by writing the desired line number followed by th
 # Differences from most BASICs
 * Nothing is in real time, no reading of individual keystrokes or doing timed actions
 * Spaces are required between all commands
-* Variables do not need to be allocated before usage with DIM, DEFINT, LET et cetera
+* Variables do not need to be allocated before usage with DIM, DEFINT, LET et cetera. The only exception is arrays which must be allocated with AR = [] instead of DIM AR(x) 
 * Array contents and set and retrieved with [] instead of ()
 * Execution time is capped out at 1 second for each message sent (PROMPTing for INPUT resets this clock)
 * Text output is limitted to 2000 characters (PROMPTing for INPUT resets this count)
@@ -69,9 +71,12 @@ Lines are added to the program by writing the desired line number followed by th
 * There are no DATA or READ commands
 
 # TODO
-* FOR...NEXT construct
-* WHILE...WENT construct
 * Load program from attachment
+* FOR...NEXT construct
 * DATA/READ commands
 * Drawing commands for image output (no real time support is planned)
 * MML commands for audio output
+
+# Known Issues
+* INSTR() does not behave correctly in terminal mode
+* TAB(x) only creates x amount of spaces instead of tabbing to column x 
