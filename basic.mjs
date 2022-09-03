@@ -3,6 +3,8 @@ console.log("Initializing...");
 import { Client, GatewayIntentBits, PermissionsBitField, AttachmentBuilder } from 'discord.js';
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMembers, GatewayIntentBits.MessageContent] });
 
+import fetch from 'node-fetch';
+
 import { create, all } from 'mathjs';
 const allButTransforms = {}
 Object.keys(all)
@@ -111,7 +113,7 @@ var timeOut = false;
 var timeLimit;
 var messageBuffer = "";
 var messageSizeError = false;
-
+var attachment = "";
 
 function preparse(ln){
 	ln = ln.replaceAll(" AND "," and ");
@@ -461,9 +463,23 @@ client.once('ready', c => {
   })
 });
 
-client.on("messageCreate", message => {
+client.on("messageCreate", async (message) => {
   console.log(message.author.username + ": " + message.content);
 
+	attachment = "";
+	let attachmentUrl = message.attachments.first()?.url;
+	if(attachmentUrl){
+		if(attachmentUrl.toUpperCase().endsWith(".TXT") | attachmentUrl.toUpperCase().endsWith(".BAS")){
+			try{
+				let attachmentStream = await fetch(attachmentUrl);
+				attachment = await attachmentStream.text();
+			}
+			catch{
+				console.log(error)
+			}
+		}
+	}
+	
   if (!(message.content.match(/<a?:.+?:\d+>/)) & (message.author.id != client.user.id)) {
     lastChannel = message.channel;
 		timer = new Date();
@@ -473,7 +489,8 @@ client.on("messageCreate", message => {
 		
 		if(wait == false){
 			currentLine = "terminal";
-		  var input = message.content.toUpperCase();
+
+		  var input = message.content.toUpperCase() + attachment.toUpperCase();
 		  parse(input);
 		}
 		else{
