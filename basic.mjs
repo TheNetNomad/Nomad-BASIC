@@ -66,7 +66,7 @@ math.import({
 	'LEFT':		function (input,len) {		return input.substring(0,len)},
 	'RIGHT':	function (input,len) {		return input.substring(input.length - len,input.length)},
 	'MID':		function (input,start,len) {return input.substring(start,start + len)},
-	'INSTR':	function (str1,str2) { 		return str1.indexOf(str2)},
+	'INSTR':	function (str1,str2) { 		return 1 + str1.indexOf(str2)},
 	'PROMPT':	function (input) { 		
 		if(currentLine == "terminal"){
 			textOut("ERROR: PROMPT NOT VALID OUTSIDE PROGRAM");
