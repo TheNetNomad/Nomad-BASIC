@@ -4,11 +4,13 @@ A simple CLI BASIC interpretor for your discord server. Currently only supports 
 
 [Try it out on _NomadNet](https://discord.gg/effsHwSs)
 
-# NPM Dependencies 
+# Dependencies 
 
 [discord js](https://discord.js.org/#/)  
 [mathjs](https://mathjs.org/)  
-Your bot's token must be stored in the TOKEN environmental variable  
+node-fetch
+
+Your bot's token must also be stored in the TOKEN environmental variable  
 
 # Commands 
 
