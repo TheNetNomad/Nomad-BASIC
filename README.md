@@ -18,9 +18,11 @@ Your bot's token must be stored in the TOKEN environmental variable
 | $H(x)  | Returns the decimal equivalent of the hexidecimal number in string x as a number|
 | $O(x)  | Returns the decimal equivalent of the octal number in string x as a number|
 | ABS(x)  | Returns the absolute value of x |
+| ASC(x)  | Returns the ASCII value of character x |
 | ATN(x)  | Returns atan x |
 | BIN$(x)  | Returns a string containing the binary representation of X |
-| CLEAR | Clears all program lines and working storage|
+| CHR$(x) | Returns the character specified vy ASCII value x |
+| CLEAR | Clears all variable values |
 | CONCAT(x,y)  | Concatenates string x and string y |
 | COS(x)  | Returns cos x |
 | END | Ends execution of program. Can be supplied as prompt input during program execution |
@@ -32,14 +34,16 @@ Your bot's token must be stored in the TOKEN environmental variable
 | IF x THEN y [ELSE z]| Evaluates boolean expression X and performs statement y if true or z if false (and provided) |
 | INPUT X | Evaluates X = PROMPT("?") |
 | INPUT X,Y | Evaluates Y = PROMPT(X) |
-| INSTR(x,y)  | Returns the position of string y within string x, or -1 if not present|
+| INSTR(x,y)  | Returns the position of string y within string x starting at 1, or 0 if not present|
 | INT(x)  | Returns x rounded downward |
 | LEFT(x,y)  | Returns the leftmost y characters of string x as a string|
 | LEN(x)  | Returns the length of x|
 | LIST X | Lists program line x |
-| LIST | Lists all program lines in storage |
+| LIST | Lists all program lines in storage as a Discord message |
+| LLIST | Lists all program lines in storage as a .bas.txt file |
 | LOG(x)  | Returns the log of x |
 | MID(x,y,z)  | Returns the first z characters of string x starting from position y as a string|
+| NEW | Clears all program lines and working storage (essentially creates a new program) | 
 | OCT$(x)  | Returns a string containing the octal representation of X |
 | PRINT X |Prints X to the screen |
 | PROMPT(x)  | Prints the query in x to the terminal and returns user input|
@@ -53,6 +57,7 @@ Your bot's token must be stored in the TOKEN environmental variable
 | SIN(x)  | Returns sin x |
 | SQR(x)  | Returns the square root of x |
 | TAN(x)  | Returns tan x |
+| TAB(x) | Returns x spaces |
 | TIME()  | Returns number of milliseconds ellapsed since January 1, 1970. |
 | TYPE(x)  | Returns the type of parameter x as a string  |
 | VAL(x)  | Returns the number contained in string x as a number |
@@ -71,12 +76,14 @@ Lines are added to the program by writing the desired line number followed by th
 * There are no DATA or READ commands
 
 # TODO
-* Load program from attachment
 * FOR...NEXT construct
-* DATA/READ commands
-* Drawing commands for image output (no real time support is planned)
+* Shape and GML commands for image output (as an image attachment, no real time support is planned)
+* Different scope for different Discord channels
+* Load program from network location
 * MML commands for audio output
+* DATA/READ commands
+
 
 # Known Issues
-* INSTR() does not behave correctly in terminal mode
+* INSTR() does not behave correctly when printed directly (versus being saved to a variable)
 * TAB(x) only creates x amount of spaces instead of tabbing to column x 
