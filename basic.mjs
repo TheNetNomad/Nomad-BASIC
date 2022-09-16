@@ -15,7 +15,14 @@ Object.keys(all)
 const math = create(allButTransforms)
 
 math.import({
-	'add':		function (x,y) {				return x + y},
+	'add':		function (x,y) {				
+		if(math.typeOf(x) == "Unit" || math.typeOf(y) == "Unit"){
+			textOut("TYPEERROR: CANNOT ADD OR CONCATEATE UNDECLARED SYMBOL");
+			quit = true;
+			return "";
+		}
+		return x + y
+	},
 	'equal':	function (x,y) {				return x == y},
 	'unequal':	function (x,y) {			return x != y},
 	'TIME':		function () {
@@ -66,7 +73,7 @@ math.import({
 	'LEFT':		function (input,len) {		return input.substring(0,len)},
 	'RIGHT':	function (input,len) {		return input.substring(input.length - len,input.length)},
 	'MID':		function (input,start,len) {return input.substring(start,start + len)},
-	'INSTR':	function (str1,str2) { 		return 1 + str1.indexOf(str2)},
+	'INSTR':	function (str1,str2) { 		return str1.indexOf(str2)},
 	'PROMPT':	function (input) { 		
 		if(currentLine == "terminal"){
 			textOut("ERROR: PROMPT NOT VALID OUTSIDE PROGRAM");
@@ -97,6 +104,7 @@ math.import({
 
 const basicEvaluate = math.evaluate;
 
+var programName = "BAS";
 var wait = false;
 var quit = false;
 var gosubret = false;
@@ -115,7 +123,7 @@ var messageBuffer = "";
 var messageSizeError = false;
 var attachment = "";
 
-function preparse(ln){
+function preEvaluate(ln){
 	ln = ln.replaceAll(" AND "," and ");
 	ln = ln.replaceAll(" OR "," or ");
 	ln = ln.replaceAll(" XOR "," xor ");
@@ -134,12 +142,11 @@ function parse(line){
 	line = (line + "").trim();
 	
 	if(line.endsWith(";")){
-		//console.log("dog");
 		line = line.substring(0,line.length - 1);
 		console.log("Fixed line " + line);
 	}
 	
-	
+	line = line.replaceAll('PRINT"','PRINT "');
 	let splitLine = line.split(/ (.*)/s);
 	
 	console.log("Evaluating " + line)
@@ -167,11 +174,15 @@ function parse(line){
 				if(currentLine < program.length){
 					parse(subline);
 				}
+
+				if(gosubret ||  (quit || wait)){
+					break;
+				}
 			}
 		}
 		return null;
 	}
-
+	
 	switch(splitLine[0]) {
 		case "REM":
 			break;
@@ -190,6 +201,7 @@ function parse(line){
 		case "NEW":
 			scope = {};
 			program = [];
+			programName = "BAS";
 			break;
 
 		case "CLEAR":
@@ -211,7 +223,7 @@ function parse(line){
 			}
 
 			try {
-				splitLine[1][0] = preparse(splitLine[1][0]);
+				splitLine[1][0] = preEvaluate(splitLine[1][0]);
 				splitLine[1][0] = splitLine[1][0].replaceAll(/(?<!(=|<|>))=(?!=)/g,"==");
 				console.log(splitLine[1][0] );
 				ifTest = basicEvaluate(splitLine[1][0],scope);
@@ -260,7 +272,6 @@ function parse(line){
 				currentLine = parseInt(splitLine[1]);
 				gosubret = false;
 				while(!gosubret && ((!quit && !wait) && currentLine < program.length)){
-	        console.log("Line " + currentLine + "outta" + program.length)
 					if(program[currentLine] != null){
 						parse(program[currentLine])
 					}
@@ -337,7 +348,7 @@ function parse(line){
 				if(splitLine[1] == "" | splitLine[1] == null){
 					textOut(" ");
 				}else{
-					splitLine[1] = preparse(splitLine[1]);
+					splitLine[1] = preEvaluate(splitLine[1]);
 					
 					let inQuote = false;
 					for (var i = 0; i < splitLine[1].length; i++) {
@@ -394,6 +405,10 @@ function parse(line){
 				}
 			}
 			break;
+
+		case "NAME":
+			programName = splitLine[1];
+			break;
 			
 		case "SAVE":
 		case "LLIST":
@@ -403,17 +418,21 @@ function parse(line){
 					txtfile += i + " " + program[i] + '\n'
 				}
 			}
-			let attachment = new AttachmentBuilder(Buffer.from(txtfile, 'utf-8'), { name: 'bas.txt' })
+
+			if(splitLine[1] != undefined){
+				programName = splitLine[1];
+			}
+			programName = programName.replaceAll('"','');
+			
+			let attachment = new AttachmentBuilder(Buffer.from(txtfile, 'utf-8'), { name: programName.toUpperCase() + '.txt' })
 			lastChannel.send({ files: [attachment] });
 			break;
 			
 		case "END":
-			if(currentLine == "terminal"){
-				quit = true;
-			}
-			else{
+			if(currentLine != "terminal"){
 				currentLine = program.length;
 			}
+			quit = true;
 			break;
 		
 		default:
@@ -429,7 +448,7 @@ function parse(line){
 			}
 			else{
 				try {
-					line = preparse(line);
+					line = preEvaluate(line);
 					basicEvaluate(line,scope);
 				} catch (error) {
 					textOut(error.toString().split("\n")[0]   + " in " + currentLine);
