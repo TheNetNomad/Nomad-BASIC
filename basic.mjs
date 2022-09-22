@@ -295,7 +295,7 @@ function parse(line){
 			break;
 		
 		case "RETURN":
-			currentLine = stack.pop();
+			currentLine = stack.pop() - 1;
 			gosubret = true;
 			break;
 
